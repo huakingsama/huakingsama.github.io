@@ -370,6 +370,117 @@
         button:active {
             transform: translateY(0);
         }
+        /* 留言提交行、留言列表 */
+        .msg-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .msg-tip {
+            font-size: .88rem;
+            color: var(--accent-2);
+        }
+        .msg-tip.is-bad {
+            color: #d64545;
+        }
+        .msg-hint {
+            margin-top: 1.1rem;
+            font-size: .86rem;
+            color: var(--muted);
+        }
+        .msg-list {
+            list-style: none;
+            margin-top: 1.5rem;
+            display: grid;
+            gap: .85rem;
+        }
+        .msg-item {
+            padding: 1rem 1.15rem;
+            background: #fafcff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+        }
+        .msg-head {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            margin-bottom: .3rem;
+        }
+        .msg-name {
+            flex: 1;
+            min-width: 0;
+            font-size: .95rem;
+            font-weight: 500;
+            color: var(--accent);
+            word-break: break-all;
+        }
+        .msg-time {
+            flex: none;
+            font-size: .82rem;
+            color: var(--muted);
+        }
+        .msg-del {
+            flex: none;
+            padding: .3rem .6rem;
+            font-family: inherit;
+            font-size: .82rem;
+            line-height: 1.4;
+            color: var(--muted);
+            background: transparent;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: none;
+            cursor: pointer;
+            transition: color .2s, background-color .2s, border-color .2s;
+        }
+        .msg-del:hover {
+            transform: none;
+            box-shadow: none;
+            color: #d64545;
+            background: #fff5f5;
+            border-color: #f1cccc;
+        }
+        .msg-del.is-armed {
+            color: #fff;
+            background: #d64545;
+            border-color: #d64545;
+        }
+        .msg-text {
+            font-size: .97rem;
+            line-height: 1.75;
+            color: var(--text);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .msg-empty {
+            margin-top: 1.5rem;
+            padding: 1.7rem 1.2rem;
+            text-align: center;
+            font-size: .95rem;
+            color: var(--muted);
+            background: #fafcff;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+        }
+        .msg-new {
+            animation: msgIn .32s ease;
+        }
+        @keyframes msgIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .msg-new {
+                animation: none;
+            }
+        }
         /* ===== 页脚 ===== */
         footer {
             padding: 2.2rem 1.5rem;
@@ -468,15 +579,15 @@
     <!--头部横幅-->
     <section class="hero">
         <h1>你好，欢迎来到我的博客</h1>
-        <p>一名热爱AI与Web开发的学习者 | 持续写代码，持续探索新技术</p>
+        <p>一名热爱AI与Web开发的学习者 | 持续写代码、用AI，持续探索新技术</p>
     </section>
 
     <div class="container">
         <!--关于我-->
         <section id="about" class="about rv">
             <h2 class="section-title">关于我</h2>
-            <p>我是来自泸州职业技术学院26级大数据与人工智能学院软件技术2班的钟文华，目前在智汇AI应用实验室学习。对前端网页开发、AI应用开发很感兴趣。平时喜欢写代码，以后将努力学习Python、HTML/CSS/JS，这个博客用来记录学习笔记、项目总结和技术感悟。</p>
-            <p class="interest">兴趣方向：大模型应用、智能小工具开发</p>
+            <p>我是来自泸州职业技术学院26级大数据与人工智能学院软件技术2班的钟文华，目前在智汇AI应用实验室选拔学习。对AI应用开发很感兴趣。平时喜欢写代码、用AI，以后将努力学习Python、HTML/CSS/JS/AI agent，这个博客用来记录学习笔记、项目发布和试验。</p>
+            <p class="interest">兴趣方向：AI智能体，大模型应用</p>
         </section>
 
         <!--技能板块-->
@@ -524,15 +635,15 @@
                 <div class="project-card">
                     <a href="snake.html" target="_blank">
                         <div class="card-cover">
-                            <img src="img/cover-nailong.png" alt="奶龙贪吃蛇小游戏">
+                            <img src="img/cover-nailong.png" alt="奶蛙贪吃蛇小游戏">
                         </div>
                         <div class="content">
-                            <h3>网页贪吃蛇小游戏
+                            <h3>奶蛙贪吃蛇
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M5 12h12M12.5 6.5l6 5.5-6 5.5"></path>
                                 </svg>
                             </h3>
-                            <p>奶龙贪吃蛇·人机对战版，支持换皮肤、穿墙模式、人机AI对战。点击卡片打开新页面游玩。</p>
+                            <p>奶蛙贪吃蛇·人机对战：5 套主题、七种掉落、连击与冲刺，对手可选猎手或捕食者（可关闭），支持穿墙模式与手机滑动操作。每局 3 个随机任务、10 个成就、本地排行榜，点击卡片打开新页面游玩。</p>
                         </div>
                     </a>
                 </div>
@@ -566,9 +677,17 @@
         <!--留言区-->
         <section id="msg" class="message-box rv">
             <h2 class="section-title">留言板</h2>
-            <input type="text" placeholder="你的昵称" aria-label="你的昵称">
-            <textarea rows="4" placeholder="写下你的留言" aria-label="写下你的留言"></textarea>
-            <button onclick="alert('留言提交成功！')">提交留言</button>
+            <form id="msgForm" novalidate>
+                <input type="text" id="msgName" maxlength="20" autocomplete="nickname" placeholder="你的昵称（不填就显示“匿名访客”）" aria-label="你的昵称">
+                <textarea id="msgText" rows="4" maxlength="500" placeholder="写下你的留言（最多 500 字）" aria-label="写下你的留言"></textarea>
+                <div class="msg-actions">
+                    <button type="submit" id="msgSubmit">提交留言</button>
+                    <span class="msg-tip" id="msgTip" role="status" aria-live="polite"></span>
+                </div>
+            </form>
+            <p class="msg-hint" id="msgHint">提交后会立刻出现在下面，刷新或另开标签页都不会丢。</p>
+            <div class="msg-empty" id="msgEmpty">还没有留言，来写第一条吧。</div>
+            <ul class="msg-list" id="msgList" aria-live="polite"></ul>
         </section>
     </div>
 
@@ -604,6 +723,188 @@
         } else {
             revealTargets.forEach(el => el.classList.add('in'));
         }
+
+        // ===== 留言板 =====
+        // 现在：提交后立刻显示、刷新不丢、另开标签页会自动同步（storage 事件）。
+        // 想让所有访客都能看到彼此的留言，就填好下面 GISCUS 三项，本机留言会自动换成在线评论区：
+        //   1. 把博客推到一个公开的 GitHub 仓库，仓库 Settings → General → Features 勾上 Discussions
+        //   2. 打开 https://github.com/apps/giscus 安装到该仓库（选 Only select repositories）
+        //   3. 打开 https://giscus.app 填仓库名与分类，复制它给出的 repo-id / category-id 填到下面
+        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区）
+        const GISCUS = { repo: '', repoId: '', categoryId: '', category: 'General' };
+
+        (function () {
+            const KEY = 'blog.messages.v1';
+            const MAX = 200;
+            const listEl = document.getElementById('msgList');
+            const emptyEl = document.getElementById('msgEmpty');
+            const formEl = document.getElementById('msgForm');
+            const nameEl = document.getElementById('msgName');
+            const textEl = document.getElementById('msgText');
+            const tipEl = document.getElementById('msgTip');
+            const hintEl = document.getElementById('msgHint');
+            if (!listEl || !formEl) return;
+
+            function read() {
+                try {
+                    const v = JSON.parse(localStorage.getItem(KEY) || '[]');
+                    return Array.isArray(v) ? v : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function write(arr) {
+                try {
+                    localStorage.setItem(KEY, JSON.stringify(arr));
+                } catch (e) {}
+            }
+
+            function ago(ts) {
+                const span = Date.now() - ts;
+                if (span < 60000) return '刚刚';
+                if (span < 3600000) return Math.floor(span / 60000) + ' 分钟前';
+                if (span < 86400000) return Math.floor(span / 3600000) + ' 小时前';
+                const d = new Date(ts);
+                const p = n => String(n).padStart(2, '0');
+                return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+            }
+
+            // 全部用 textContent 写入，避免把留言当 HTML 渲染
+            function render(freshId) {
+                const arr = read();
+                listEl.textContent = '';
+                emptyEl.hidden = arr.length > 0;
+                arr.forEach(function (m) {
+                    const li = document.createElement('li');
+                    li.className = 'msg-item' + (m.id === freshId ? ' msg-new' : '');
+
+                    const head = document.createElement('div');
+                    head.className = 'msg-head';
+                    const nm = document.createElement('span');
+                    nm.className = 'msg-name';
+                    nm.textContent = m.name;
+                    const tm = document.createElement('span');
+                    tm.className = 'msg-time';
+                    tm.textContent = ago(m.at);
+                    tm.title = new Date(m.at).toLocaleString('zh-CN');
+
+                    // 删除：第一下先把按钮变成“确认删除”，再点一下才真删
+                    const del = document.createElement('button');
+                    del.type = 'button';
+                    del.className = 'msg-del';
+                    del.textContent = '删除';
+                    del.setAttribute('aria-label', '删除这条留言');
+                    del.addEventListener('click', function () {
+                        if (!del.classList.contains('is-armed')) {
+                            del.classList.add('is-armed');
+                            del.textContent = '确认删除';
+                            clearTimeout(del.armTimer);
+                            del.armTimer = setTimeout(function () {
+                                del.classList.remove('is-armed');
+                                del.textContent = '删除';
+                            }, 3000);
+                            return;
+                        }
+                        clearTimeout(del.armTimer);
+                        write(read().filter(function (x) {
+                            return x.id !== m.id;
+                        }));
+                        render();
+                        tip('已删除');
+                    });
+
+                    head.appendChild(nm);
+                    head.appendChild(tm);
+                    head.appendChild(del);
+
+                    const tx = document.createElement('p');
+                    tx.className = 'msg-text';
+                    tx.textContent = m.text;
+
+                    li.appendChild(head);
+                    li.appendChild(tx);
+                    listEl.appendChild(li);
+                });
+            }
+
+            let tipTimer = 0;
+
+            function tip(msg, bad) {
+                tipEl.textContent = msg;
+                tipEl.classList.toggle('is-bad', !!bad);
+                clearTimeout(tipTimer);
+                tipTimer = setTimeout(function () {
+                    tipEl.textContent = '';
+                }, 2600);
+            }
+
+            formEl.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const name = nameEl.value.trim().slice(0, 20) || '匿名访客';
+                const text = textEl.value.trim().slice(0, 500);
+                if (!text) {
+                    tip('先写点什么再提交吧', true);
+                    textEl.focus();
+                    return;
+                }
+                const item = {
+                    id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+                    name: name,
+                    text: text,
+                    at: Date.now()
+                };
+                const arr = read();
+                arr.unshift(item);
+                write(arr.slice(0, MAX));
+                render(item.id);
+                textEl.value = '';
+                tip('已发布');
+            });
+
+            // 另一个标签页提交时，这边立刻同步显示
+            window.addEventListener('storage', function (e) {
+                if (e.key === KEY) render();
+            });
+
+            // 让“刚刚 / n 分钟前”保持准确
+            setInterval(function () {
+                if (read().length) render();
+            }, 30000);
+
+            function mountGiscus() {
+                const box = document.createElement('div');
+                box.className = 'giscus';
+                const s = document.createElement('script');
+                s.src = 'https://giscus.app/client.js';
+                s.async = true;
+                s.setAttribute('crossorigin', 'anonymous');
+                s.setAttribute('data-repo', GISCUS.repo);
+                s.setAttribute('data-repo-id', GISCUS.repoId);
+                s.setAttribute('data-category', GISCUS.category);
+                s.setAttribute('data-category-id', GISCUS.categoryId);
+                s.setAttribute('data-mapping', 'pathname');
+                s.setAttribute('data-strict', '0');
+                s.setAttribute('data-reactions-enabled', '1');
+                s.setAttribute('data-emit-metadata', '0');
+                s.setAttribute('data-input-position', 'top');
+                s.setAttribute('data-theme', 'light');
+                s.setAttribute('data-lang', 'zh-CN');
+                s.setAttribute('data-loading', 'lazy');
+                box.appendChild(s);
+                document.getElementById('msg').appendChild(box);
+            }
+
+            if (GISCUS.repo && GISCUS.repoId && GISCUS.categoryId) {
+                formEl.hidden = true;
+                hintEl.hidden = true;
+                emptyEl.hidden = true;
+                listEl.hidden = true;
+                mountGiscus();
+            } else {
+                render();
+            }
+        })();
     </script>
 </body>
 </html>
