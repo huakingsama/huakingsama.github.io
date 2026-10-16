@@ -389,6 +389,9 @@
             font-size: .86rem;
             color: var(--muted);
         }
+        .msg-hint:empty {
+            display: none;
+        }
         .msg-list {
             list-style: none;
             margin-top: 1.5rem;
@@ -727,12 +730,15 @@
 
         // ===== 留言板 =====
         // 现在：提交后立刻显示、刷新不丢、另开标签页会自动同步（storage 事件）。
-        // 想让所有访客都能看到彼此的留言，就填好下面 GISCUS 三项，本机留言会自动换成在线评论区：
-        //   1. 把博客推到一个公开的 GitHub 仓库，仓库 Settings → General → Features 勾上 Discussions
-        //   2. 打开 https://github.com/apps/giscus 安装到该仓库（选 Only select repositories）
-        //   3. 打开 https://giscus.app 填仓库名与分类，复制它给出的 repo-id / category-id 填到下面
-        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区）
-        const GISCUS = { repo: '', repoId: '', categoryId: '', category: 'General' };
+        // 在线留言（giscus）：三项都填好后，本机留言板会自动隐藏，换成所有访客共享的评论区。
+        //   repo / repoId 已按线上仓库填好；categoryId 装完 giscus app 后从 https://giscus.app 复制过来即可。
+        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区）。
+        const GISCUS = {
+            repo: 'huakingsama/huakingsama.github.io',
+            repoId: 'R_kgDOVKghuw',
+            categoryId: '',
+            category: 'General'
+        };
 
         (function () {
             const KEY = 'blog.messages.v1';
@@ -901,7 +907,7 @@
 
             if (GISCUS.repo && GISCUS.repoId && GISCUS.categoryId) {
                 formEl.hidden = true;
-                hintEl.hidden = true;
+                if (hintEl) hintEl.hidden = true;
                 emptyEl.hidden = true;
                 listEl.hidden = true;
                 mountGiscus();
