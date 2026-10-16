@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>奶娃贪吃蛇·人机对战版</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23fffbea'/%3E%3Ccircle cx='15' cy='19' r='9' fill='%23e53935'/%3E%3Cpath d='M15 11V6' stroke='%236d4c41' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M15 8c3-4 7-3 7-3s-1 4-5 4z' fill='%2343a047'/%3E%3C/svg%3E" />
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Microsoft YaHei", system-ui, sans-serif;
+    }
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: linear-gradient(180deg, #fff7d6 0%, #ffd9a8 100%);
+        color: #5b4636;
+        padding: 12px;
+        min-height: 100vh;
+        transition: background 0.4s ease;
+    }
+    h1 {
+        font-size: 22px;
+        margin-bottom: 8px;
+        color: #f57c00;
+    }
+    #gameCanvas {
+        border: 4px solid #ffb74d;
+        border-radius: 16px;
+        background: #fffbea;
+        max-width: 96vw;
+        height: auto;
+        touch-action: none;
+        box-shadow: 0 8px 24px rgba(255, 183, 77, 0.45);
+        transition: border-color 0.4s ease, background 0.4s ease;
+    }
+    .panel {
+        margin: 10px 0;
+        text-align: center;
+        width: 100%;
+        max-width: 420px;
+    }
+    .info {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 6px;
+    }
+    .highScore {
+        color: #e65100;
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    button {
+        padding: 9px 14px;
+        margin: 4px;
+        min-height: 44px;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: bold;
+        color: white;
+        background: #ffa726;
+        box-shadow: 0 4px 10px rgba(255, 167, 38, 0.4);
+        cursor: pointer;
+    }
+    button:active {
+        background: #fb8c00;
+    }
+    .tipText {
+        min-height: 24px;
+        margin: 6px 0;
+        font-size: 16px;
+        font-weight: bold;
+        color: #d84315;
+    }
+    .modeText {
+        font-size: 14px;
+        color: #6d4c41;
+        margin-top: 6px;
+    }
+    /* 素材占位容器：只用来给 canvas 提供图片，不显示 */
+    .spriteBank {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .skinPanel {
+        position: fixed;
+        left: 50%;
+        top: 45%;
+        transform: translate(-50%, -50%) scale(0.8);
+        width: 86%;
+        max-width: 340px;
+        padding: 18px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        text-align: center;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: all 0.25s ease;
+        z-index: 20;
+    }
+    .skinPanel.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    .skinPanel h3 {
+        margin-bottom: 12px;
+        color: #5b4636;
+    }
+    .skinList {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .skinItem {
+        padding: 10px;
+        border-radius: 12px;
+        border: 3px solid transparent;
+        cursor: pointer;
+        font-weight: bold;
+        color: #fff;
+        transition: transform 0.15s ease;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+    .skinItem:active {
+        transform: scale(0.95);
+    }
+    .skinItem.active {
+        border-color: #333;
+    }
+    .skinItem .preview {
+        position: relative;
+        width: 100%;
+        height: 52px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+    }
+    .skinItem .preview img {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 40px;
+        height: 40px;
+        transform: translate(-50%, -50%);
+        image-rendering: auto;
+    }
+    .skinItem .foodTag {
+        font-size: 13px;
+        font-weight: normal;
+        opacity: 0.9;
+    }
+    .closeSkinBtn {
+        margin-top: 12px;
+        background: #78909c;
+    }
+    .mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+        z-index: 10;
+    }
+    .mask.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+</style>
+</head>
+<body>
+<h1 id="gameTitle">奶娃贪吃蛇</h1>
+<div class="panel">
+    <div class="info">当前分数：<span id="score">0</span></div>
+    <div class="highScore">最高分：<span id="highScore">0</span></div>
+    <button id="btnPause">暂停 / 继续</button>
+    <button id="btnRestart">开始游戏</button>
+    <button id="btnSkin">换场景</button>
+    <button id="btnMode">穿墙模式：关</button>
+    <button id="btnAI">人机对战：关</button>
+    <div class="tipText" id="gameTip"></div>
+    <div class="modeText">电脑：方向键，按住Shift玩家加速　手机：在画布上滑动</div>
+    <div class="modeText">人机对战：对手被淘汰后 10 秒自动补位</div>
+</div>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+
+<!-- ===== 素材：食物与蛇头图片（透明底，抠图后的小图） ===== -->
+<div class="spriteBank" aria-hidden="true">
+    <img id="spriteHead" src="img/head.png" alt="" />
+    <img id="spriteFoodApple" src="img/food/apple.png" alt="" />
+    <img id="spriteFoodIce" src="img/food/ice.png" alt="" />
+    <img id="spriteFoodLeaf" src="img/food/leaf.png" alt="" />
+    <img id="spriteFoodHeart" src="img/food/heart.png" alt="" />
+</div>
+
+<div class="mask" id="mask"></div>
+<div class="skinPanel" id="skinPanel">
+    <h3>选择场景</h3>
+    <div class="skinList" id="skinList"></div>
+    <button class="closeSkinBtn" id="closeSkinBtn">关闭</button>
+</div>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreText = document.getElementById("score");
+const highScoreText = document.getElementById("highScore");
+const gameTip = document.getElementById("gameTip");
+const gameTitle = document.getElementById("gameTitle");
+const btnPause = document.getElementById("btnPause");
+const btnRestart = document.getElementById("btnRestart");
+const btnMode = document.getElementById("btnMode");
+const btnSkin = document.getElementById("btnSkin");
+const btnAI = document.getElementById("btnAI");
+const mask = document.getElementById("mask");
+const skinPanel = document.getElementById("skinPanel");
+const skinList = document.getElementById("skinList");
+const closeSkinBtn = document.getElementById("closeSkinBtn");
+
+const size = 20;                 // 每格 20 像素
+const TICK = 130;                // 每步间隔（毫秒）
+const AI_RESPAWN_MS = 10000;     // 对手被淘汰后重新进场的时间间隔（毫秒）
+
+let snake, dx, dy, food, score, gameLoop;
+let isIdle = true;               // 还没开始玩
+let isPause = false;
+let gameOver = false;
+let wallWrap = false;
+let aiEnable = false;
+let aiSnake, aiDx, aiDy;
+let aiDead = false;              // 对手是否已被淘汰
+let aiRespawnAt = 0;             // 对手补位的时间点
+let overText = "";
+let isPlayerBoost = false;
+let effects = [];                // 吃到食物时的光圈特效
+let toast = null;                // 棋盘上方的短提示条
+let highScore = localStorage.getItem("nailongHigh") || 0;
+highScoreText.innerText = highScore;
+
+// ===== 图片素材 =====
+const sprites = {
+    head: document.getElementById("spriteHead"),
+    apple: document.getElementById("spriteFoodApple"),
+    ice: document.getElementById("spriteFoodIce"),
+    leaf: document.getElementById("spriteFoodLeaf"),
+    heart: document.getElementById("spriteFoodHeart")
+};
+function spriteReady(img) {
+    return !!img && img.complete && img.naturalWidth > 0;
+}
+function spritePath(key) {
+    const img = sprites[key];
+    return img ? (img.getAttribute("src") || "") : "";
+}
+
+// ===== 场景配置：每个场景吃的东西不一样 =====
+const skins = [
+    {
+        id: "nailong", name: "奶黄",
+        body: "#ffd166", belly: "#fff7d6", outline: "#e67e22", cheek: "#ff9a9a",
+        food: "#ef5350", foodName: "苹果", foodImgKey: "apple",
+        canvasBg: "#fffbea", gridColor: "#ffe082", borderColor: "#ffb74d",
+        bodyGradient: "linear-gradient(180deg, #fff7d6 0%, #ffd9a8 100%)"
+    },
+    {
+        id: "octopus", name: "蓝冰",
+        body: "#82b1ff", belly: "#e3f2fd", outline: "#1976d2", cheek: "#b3e5fc",
+        food: "#4dd0e1", foodName: "冰晶", foodImgKey: "ice",
+        canvasBg: "#eaf6ff", gridColor: "#b3e5fc", borderColor: "#42a5f5",
+        bodyGradient: "linear-gradient(180deg, #e1f5fe 0%, #b3e5fc 100%)"
+    },
+    {
+        id: "shield", name: "森林",
+        body: "#aed581", belly: "#f1f8e9", outline: "#558b2f", cheek: "#c5e1a5",
+        food: "#8bc34a", foodName: "叶子", foodImgKey: "leaf",
+        canvasBg: "#f1fbe7", gridColor: "#dcedc8", borderColor: "#7cb342",
+        bodyGradient: "linear-gradient(180deg, #f1f8e9 0%, #c5e1a5 100%)"
+    },
+    {
+        id: "patrick", name: "粉萌",
+        body: "#f8bbd9", belly: "#fff0f6", outline: "#c2185b", cheek: "#ff80ab",
+        food: "#ff4081", foodName: "爱心", foodImgKey: "heart",
+        canvasBg: "#fff0f6", gridColor: "#ffc1e3", borderColor: "#f06292",
+        bodyGradient: "linear-gradient(180deg, #ffe4f1 0%, #ffc1e3 100%)"
+    }
+];
+let currentSkinId = localStorage.getItem("nailongSkin") || "nailong";
+
+function getSkin() {
+    return skins.find(s => s.id === currentSkinId) || skins[0];
+}
+
+function applySkin(skin) {
+    currentSkinId = skin.id;
+    localStorage.setItem("nailongSkin", skin.id);
+    document.body.style.background = skin.bodyGradient;
+    canvas.style.background = skin.canvasBg;
+    canvas.style.borderColor = skin.borderColor;
+    gameTitle.textContent = "奶娃贪吃蛇";
+    renderSkinList();
+    // 切换场景：立刻换一份新食物，画面马上显示新场景的食物图（不重置分数和蛇身）
+    if (food) food = createFood();
+    drawScene();
+    if (isIdle) drawOverlay("准备开始", "点击「开始游戏」");
+    else if (isPause) drawOverlay("已暂停", "点击「暂停 / 继续」继续");
+    else if (gameOver) drawOverlay("游戏结束", overText);
+}
+
+function renderSkinList() {
+    skinList.innerHTML = "";
+    skins.forEach(skin => {
+        const item = document.createElement("div");
+        item.className = "skinItem" + (skin.id === currentSkinId ? " active" : "");
+        item.style.background = skin.body;
+        item.innerHTML =
+            '<div class="preview" style="background:' + skin.canvasBg +
+            ';border:2px solid ' + skin.borderColor + ';">' +
+            '<img src="' + spritePath(skin.foodImgKey) + '" alt="" />' +
+            '</div><div>' + skin.name + '</div>' +
+            '<div class="foodTag">吃：' + skin.foodName + '</div>';
+        item.onclick = function () {
+            applySkin(skin);
+        };
+        skinList.appendChild(item);
+    });
+}
+
+// ===== 音效（Web Audio 生成，不需要音频文件） =====
+let audioCtx = null;
+function playEatSound() {
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(780, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.22, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+        osc.start(audioCtx.currentTime);
+        osc.stop(audioCtx.currentTime + 0.12);
+    } catch (err) {
+        /* 浏览器不支持就静音，不影响游戏 */
+    }
+}
+
+// ===== 触屏参数 =====
+let touchStartX = 0;
+let touchStartY = 0;
+const minSlideDistance = 40;
+
+// ===== 状态初始化 =====
+function resetState() {
+    snake = [{ x: 2, y: 2 }];
+    dx = 1;
+    dy = 0;
+    aiSnake = [{ x: 17, y: 17 }];
+    aiDx = -1;
+    aiDy = 0;
+    score = 0;
+    scoreText.textContent = score;
+    isPlayerBoost = false;
+    effects = [];
+    toast = null;
+    aiDead = false;
+    aiRespawnAt = 0;
+    overText = "";
+    food = createFood();
+}
+
+function initGame() {
+    resetState();
+    isIdle = false;
+    isPause = false;
+    gameOver = false;
+    gameTip.textContent = "";
+    btnRestart.innerText = "重新开始";
+    if (gameLoop) clearInterval(gameLoop);
+    gameLoop = setInterval(draw, TICK);
+    drawScene();
+}
+
+function createFood() {
+    let newFood;
+    while (true) {
+        newFood = {
+            x: Math.floor(Math.random() * (canvas.width / size)),
+            y: Math.floor(Math.random() * (canvas.height / size))
+        };
+        const onPlayerSnake = snake.some(seg => seg.x === newFood.x && seg.y === newFood.y);
+        const onAiSnake = aiSnake.some(seg => seg.x === newFood.x && seg.y === newFood.y);
+        if (!onPlayerSnake && !onAiSnake) break;
+    }
+    return newFood;
+}
+
+// ===== AI 自动寻路 =====
+function aiMoveThink() {
+    if (!aiEnable) return;
+    const aiHead = aiSnake[0];
+    const targetX = food.x;
+    const targetY = food.y;
+
+    if (aiHead.x < targetX && aiDx !== -1) {
+        aiDx = 1; aiDy = 0;
+    } else if (aiHead.x > targetX && aiDx !== 1) {
+        aiDx = -1; aiDy = 0;
+    } else if (aiHead.y < targetY && aiDy !== -1) {
+        aiDx = 0; aiDy = 1;
+    } else if (aiHead.y > targetY && aiDy !== 1) {
+        aiDx = 0; aiDy = -1;
+    }
+
+    const nextX = aiHead.x + aiDx;
+    const nextY = aiHead.y + aiDy;
+    const maxGrid = canvas.width / size;
+    const hitSelf = aiSnake.some(s => s.x === nextX && s.y === nextY);
+    const hitWall = !wallWrap && (nextX < 0 || nextY < 0 || nextX >= maxGrid || nextY >= maxGrid);
+
+    if (hitSelf || hitWall) {
+        const dirList = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (const [nx, ny] of dirList) {
+            if (nx === -aiDx && ny === -aiDy) continue;
+            const testX = aiHead.x + nx;
+            const testY = aiHead.y + ny;
+            const crash = aiSnake.some(s => s.x === testX && s.y === testY);
+            const wallCrash = !wallWrap && (testX < 0 || testY < 0 || testX >= maxGrid || testY >= maxGrid);
+            if (!crash && !wallCrash) {
+                aiDx = nx; aiDy = ny;
+                break;
+            }
+        }
+    }
+}
+
+// ===== 键盘：方向键 + 按住 Shift 玩家加速（AI 不受影响） =====
+const ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+document.addEventListener("keydown", e => {
+    if (isIdle) {
+        if (ARROW_KEYS.indexOf(e.key) !== -1) {
+            e.preventDefault();
+            initGame();
+        }
+        return;
+    }
+    if (gameOver || isPause) return;
+    if (ARROW_KEYS.indexOf(e.key) !== -1) e.preventDefault();
+
+    if (e.key === "Shift") {
+        isPlayerBoost = true;
+        return;
+    }
+    switch (e.key) {
+        case "ArrowUp":    if (dy !== 1)  { dx = 0;  dy = -1; } break;
+        case "ArrowDown":  if (dy !== -1) { dx = 0;  dy = 1;  } break;
+        case "ArrowLeft":  if (dx !== 1)  { dx = -1; dy = 0;  } break;
+        case "ArrowRight": if (dx !== -1) { dx = 1;  dy = 0;  } break;
+    }
+});
+document.addEventListener("keyup", e => {
+    if (e.key === "Shift") isPlayerBoost = false;
+});
+window.addEventListener("blur", () => { isPlayerBoost = false; });
+
+// ===== 手机触屏滑动 =====
+canvas.addEventListener("touchstart", e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+}, { passive: false });
+
+canvas.addEventListener("touchend", e => {
+    if (isIdle || gameOver || isPause) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    const diffX = touch.clientX - touchStartX;
+    const diffY = touch.clientY - touchStartY;
+
+    if (Math.abs(diffX) < minSlideDistance && Math.abs(diffY) < minSlideDistance) return;
+
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX > 0 && dx !== -1) { dx = 1; dy = 0; }
+        else if (diffX < 0 && dx !== 1) { dx = -1; dy = 0; }
+    } else {
+        if (diffY > 0 && dy !== -1) { dx = 0; dy = 1; }
+        else if (diffY < 0 && dy !== 1) { dx = 0; dy = -1; }
+    }
+}, { passive: false });
+
+// ===== 蛇身绘制 =====
+function drawSnakeSegment(x, y, isHead, isAi) {
+    const skin = getSkin();
+    const px = x * size;
+    const py = y * size;
+    const r = size / 2 - 1;
+
+    // 玩家蛇头用奶龙头像图片，按方向旋转
+    if (isHead && !isAi && spriteReady(sprites.head)) {
+        let angle = 0;
+        if (dx === 1) angle = 0;
+        else if (dx === -1) angle = Math.PI;
+        else if (dy === -1) angle = -Math.PI / 2;
+        else if (dy === 1) angle = Math.PI / 2;
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.translate(px + size / 2, py + size / 2);
+        ctx.rotate(angle);
+        ctx.drawImage(sprites.head, -size / 2, -size / 2, size, size);
+        ctx.restore();
+        return;
+    }
+
+    let bodyColor = skin.body;
+    let outlineColor = skin.outline;
+    if (isAi) {
+        bodyColor = "#787878";
+        outlineColor = "#333333";
+    }
+
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(px + size / 2, py + size / 2, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!isAi) {
+        ctx.fillStyle = skin.belly;
+        ctx.beginPath();
+        ctx.ellipse(px + size / 2, py + size / 2 + 2, r * 0.55, r * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(px + size / 2, py + size / 2, r - 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (isHead && isAi) {
+        let eye1x, eye1y, eye2x, eye2y;
+        if (aiDx === 1) {
+            eye1x = px + 13; eye1y = py + 5; eye2x = px + 13; eye2y = py + 12;
+        } else if (aiDx === -1) {
+            eye1x = px + 4; eye1y = py + 5; eye2x = px + 4; eye2y = py + 12;
+        } else if (aiDy === -1) {
+            eye1x = px + 5; eye1y = py + 4; eye2x = px + 12; eye2y = py + 4;
+        } else {
+            eye1x = px + 5; eye1y = py + 13; eye2x = px + 12; eye2y = py + 13;
+        }
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(eye1x, eye1y, 2.5, 0, Math.PI * 2);
+        ctx.arc(eye2x, eye2y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#000";
+        ctx.beginPath();
+        ctx.arc(eye1x, eye1y, 1.2, 0, Math.PI * 2);
+        ctx.arc(eye2x, eye2y, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ===== 食物绘制：直接画当前场景对应的图片 =====
+function drawFood(x, y) {
+    const skin = getSkin();
+    const px = x * size;
+    const py = y * size;
+    const img = sprites[skin.foodImgKey];
+
+    // 轻微呼吸缩放，让食物看起来是"活的"
+    const pulse = 0.92 + 0.08 * (Math.sin(Date.now() / 260) + 1) / 2;
+    const d = size * pulse;
+
+    if (spriteReady(img)) {
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, px + (size - d) / 2, py + (size - d) / 2, d, d);
+        ctx.restore();
+        return;
+    }
+
+    // 图片没加载出来时的备用圆形
+    const cx = px + size / 2;
+    const cy = py + size / 2;
+    ctx.fillStyle = skin.food;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    ctx.beginPath();
+    ctx.arc(cx - 2, cy - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+// ===== 吃到食物的光圈特效 =====
+function addEatEffect(gx, gy, color) {
+    effects.push({ x: gx * size + size / 2, y: gy * size + size / 2, t: 0, color: color || null });
+}
+function drawEffects() {
+    const skin = getSkin();
+    ctx.save();
+    for (const ef of effects) {
+        ctx.globalAlpha = Math.max(0, 1 - ef.t);
+        ctx.strokeStyle = ef.color || skin.food;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ef.x, ef.y, 4 + 14 * ef.t, 0, Math.PI * 2);
+        ctx.stroke();
+        ef.t += 0.16;
+    }
+    ctx.restore();
+    effects = effects.filter(ef => ef.t < 1);
+}
+
+// ===== 棋盘上的短提示条（比如对手被淘汰） =====
+function showToast(text) {
+    toast = { text: text, until: Date.now() + 2600 };
+}
+function drawToast() {
+    if (!toast) return;
+    const left = toast.until - Date.now();
+    if (left <= 0) {
+        toast = null;
+        return;
+    }
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, left / 600);
+    const w = 300;
+    const h = 40;
+    const x = (canvas.width - w) / 2;
+    const y = 14;
+    ctx.fillStyle = "rgba(255,255,255,0.96)";
+    ctx.strokeStyle = "#ffb74d";
+    ctx.lineWidth = 2;
+    roundRect(x, y, w, h, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#d84315";
+    ctx.textAlign = "center";
+    ctx.font = "bold 15px Microsoft YaHei, sans-serif";
+    ctx.fillText(toast.text, canvas.width / 2, y + 26);
+    ctx.restore();
+}
+
+// ===== 对手补位倒计时（棋盘底部） =====
+function drawRespawnCountdown() {
+    const left = Math.max(0, Math.ceil((aiRespawnAt - Date.now()) / 1000));
+    const text = "对手 " + left + " 秒后重新进场";
+    ctx.save();
+    ctx.font = "bold 14px Microsoft YaHei, sans-serif";
+    ctx.textAlign = "center";
+    const w = ctx.measureText(text).width + 26;
+    const x = (canvas.width - w) / 2;
+    const y = canvas.height - 40;
+    ctx.fillStyle = "rgba(255,255,255,0.94)";
+    ctx.strokeStyle = "#bdbdbd";
+    ctx.lineWidth = 2;
+    roundRect(x, y, w, 28, 10);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#616161";
+    ctx.fillText(text, canvas.width / 2, y + 19);
+    ctx.restore();
+}
+
+// ===== 一帧：只画画面，不改状态 =====
+function drawScene() {
+    const skin = getSkin();
+    ctx.fillStyle = skin.canvasBg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = skin.gridColor;
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += size) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += size) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    if (food) drawFood(food.x, food.y);
+
+    if (snake) {
+        snake.forEach((seg, index) => drawSnakeSegment(seg.x, seg.y, index === 0, false));
+    }
+    if (aiEnable && !aiDead && aiSnake && aiSnake.length) {
+        aiSnake.forEach((seg, index) => drawSnakeSegment(seg.x, seg.y, index === 0, true));
+    }
+    drawEffects();
+    drawToast();
+    if (aiEnable && aiDead) drawRespawnCountdown();
+}
+
+// ===== 遮罩文字（准备开始 / 暂停 / 游戏结束） =====
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+function drawOverlay(title, sub) {
+    const skin = getSkin();
+    ctx.save();
+    // 轻微提亮而不是压黑，保持画面干净
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const w = 250;
+    const h = sub ? 104 : 78;
+    const x = (canvas.width - w) / 2;
+    const y = (canvas.height - h) / 2;
+    ctx.fillStyle = "rgba(255,255,255,0.97)";
+    ctx.strokeStyle = skin.borderColor;
+    ctx.lineWidth = 3;
+    roundRect(x, y, w, h, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#5b4636";
+    ctx.font = "bold 24px Microsoft YaHei, sans-serif";
+    ctx.fillText(title, canvas.width / 2, y + (sub ? 44 : 49));
+    if (sub) {
+        ctx.fillStyle = "#8d6e63";
+        ctx.font = "bold 14px Microsoft YaHei, sans-serif";
+        ctx.fillText(sub, canvas.width / 2, y + 74);
+    }
+    ctx.restore();
+}
+
+function saveHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem("nailongHigh", highScore);
+        highScoreText.innerText = highScore;
+    }
+}
+
+function endGame(msg) {
+    gameOver = true;
+    overText = msg;
+    gameTip.textContent = msg;
+    saveHighScore();
+}
+
+// ===== 玩家走一步 =====
+function playerMoveStep() {
+    const head = snake[0];
+    let newHeadX = head.x + dx;
+    let newHeadY = head.y + dy;
+    const maxGrid = canvas.width / size;
+
+    if (wallWrap) {
+        if (newHeadX >= maxGrid) newHeadX = 0;
+        if (newHeadX < 0) newHeadX = maxGrid - 1;
+        if (newHeadY >= maxGrid) newHeadY = 0;
+        if (newHeadY < 0) newHeadY = maxGrid - 1;
+    } else {
+        if (newHeadX < 0 || newHeadY < 0 || newHeadX >= maxGrid || newHeadY >= maxGrid) {
+            endGame("游戏结束！撞到墙壁啦！");
+            return false;
+        }
+    }
+
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === newHeadX && snake[i].y === newHeadY) {
+            endGame("游戏结束！咬到自己啦！");
+            return false;
+        }
+    }
+
+    if (aiEnable && !aiDead) {
+        for (const seg of aiSnake) {
+            if (seg.x === newHeadX && seg.y === newHeadY) {
+                endGame("游戏结束！撞上对手啦！");
+                return false;
+            }
+        }
+    }
+
+    snake.unshift({ x: newHeadX, y: newHeadY });
+
+    if (newHeadX === food.x && newHeadY === food.y) {
+        score += 10;
+        scoreText.textContent = score;
+        playEatSound();
+        addEatEffect(food.x, food.y);
+        food = createFood();
+    } else {
+        snake.pop();
+    }
+    return true;
+}
+
+// ===== 对手被淘汰：清空蛇身，10 秒后自动补一条新的 =====
+function killAI(msg, gx, gy) {
+    aiDead = true;
+    aiSnake = [];
+    if (typeof gx === "number") addEatEffect(gx, gy, "#9e9e9e");
+    showToast(msg);
+    gameTip.textContent = msg;
+    aiRespawnAt = Date.now() + AI_RESPAWN_MS;
+}
+
+// 在离玩家较远处生成一条新的 AI 蛇
+function spawnAI() {
+    const maxGrid = canvas.width / size;
+    const playerHead = snake[0];
+    let pos = null;
+    for (let i = 0; i < 300; i++) {
+        const cand = {
+            x: Math.floor(Math.random() * maxGrid),
+            y: Math.floor(Math.random() * maxGrid)
+        };
+        const onPlayer = snake.some(s => s.x === cand.x && s.y === cand.y);
+        const onFood = food && food.x === cand.x && food.y === cand.y;
+        const far = Math.abs(cand.x - playerHead.x) + Math.abs(cand.y - playerHead.y) >= 8;
+        if (!onPlayer && !onFood && far) {
+            pos = cand;
+            break;
+        }
+    }
+    if (!pos) pos = { x: 0, y: 0 };
+
+    aiSnake = [pos];
+    if (Math.abs(playerHead.x - pos.x) >= Math.abs(playerHead.y - pos.y)) {
+        aiDx = playerHead.x >= pos.x ? 1 : -1;
+        aiDy = 0;
+    } else {
+        aiDx = 0;
+        aiDy = playerHead.y >= pos.y ? 1 : -1;
+    }
+    aiDead = false;
+    gameTip.textContent = "";
+    showToast("新对手进场！");
+}
+
+// ===== 每步状态推进 =====
+function update() {
+    // 对手被淘汰后，满 10 秒补一条新的进来
+    if (aiEnable && aiDead && !gameOver && Date.now() >= aiRespawnAt) spawnAI();
+
+    playerMoveStep();
+    // 按住 Shift：玩家这一拍多走一步，AI 依旧只走一步
+    if (isPlayerBoost && !gameOver) playerMoveStep();
+
+    if (aiEnable && !aiDead && !gameOver) {
+        aiMoveThink();
+        const aiHead = aiSnake[0];
+        let aiNewX = aiHead.x + aiDx;
+        let aiNewY = aiHead.y + aiDy;
+        const maxGrid = canvas.width / size;
+
+        if (wallWrap) {
+            if (aiNewX >= maxGrid) aiNewX = 0;
+            if (aiNewX < 0) aiNewX = maxGrid - 1;
+            if (aiNewY >= maxGrid) aiNewY = 0;
+            if (aiNewY < 0) aiNewY = maxGrid - 1;
+        }
+
+        const outOfWall = aiNewX < 0 || aiNewY < 0 || aiNewX >= maxGrid || aiNewY >= maxGrid;
+        const hitPlayer = snake.some(seg => seg.x === aiNewX && seg.y === aiNewY);
+        const hitSelf = aiSnake.some((seg, i) => i > 0 && i < aiSnake.length - 1 &&
+            seg.x === aiNewX && seg.y === aiNewY);
+
+        if (outOfWall) {
+            // 撞墙先掉头（穿墙模式下不会走到这里）
+            aiDx = -aiDx;
+            aiDy = -aiDy;
+        } else if (hitPlayer) {
+            killAI("对手撞上你，已被淘汰！", aiNewX, aiNewY);
+        } else if (hitSelf) {
+            killAI("对手咬到自己，已被淘汰！", aiNewX, aiNewY);
+        } else {
+            aiSnake.unshift({ x: aiNewX, y: aiNewY });
+            if (aiNewX === food.x && aiNewY === food.y) {
+                playEatSound();
+                addEatEffect(food.x, food.y);
+                food = createFood();
+            } else {
+                aiSnake.pop();
+            }
+        }
+    }
+}
+
+// ===== 主循环 =====
+function draw() {
+    if (isIdle) {
+        drawScene();
+        drawOverlay("准备开始", "点击「开始游戏」");
+        return;
+    }
+    if (isPause) {
+        drawScene();
+        drawOverlay("已暂停", "点击「暂停 / 继续」继续");
+        return;
+    }
+    if (gameOver) {
+        drawScene();
+        drawOverlay("游戏结束", overText);
+        return;
+    }
+    update();
+    drawScene();
+}
+
+// ===== 按钮 =====
+btnPause.onclick = function () {
+    if (isIdle || gameOver) return;
+    isPause = !isPause;
+    gameTip.textContent = isPause ? "已暂停" : "";
+    draw();
+};
+
+btnRestart.onclick = function () {
+    initGame();
+};
+
+btnMode.onclick = function () {
+    wallWrap = !wallWrap;
+    btnMode.innerText = wallWrap ? "穿墙模式：开" : "穿墙模式：关";
+};
+
+btnAI.onclick = function () {
+    aiEnable = !aiEnable;
+    this.innerText = aiEnable ? "人机对战：开" : "人机对战：关";
+    // 只是切换对手，不重置当前局面
+    if (food) food = createFood();
+    drawScene();
+    if (isIdle) drawOverlay("准备开始", "点击「开始游戏」");
+    else if (isPause) drawOverlay("已暂停", "点击「暂停 / 继续」继续");
+    else if (gameOver) drawOverlay("游戏结束", overText);
+};
+
+btnSkin.onclick = function () {
+    skinPanel.classList.add("show");
+    mask.classList.add("show");
+};
+
+closeSkinBtn.onclick = function () {
+    skinPanel.classList.remove("show");
+    mask.classList.remove("show");
+};
+
+mask.onclick = function () {
+    skinPanel.classList.remove("show");
+    mask.classList.remove("show");
+};
+
+// ===== 启动 =====
+resetState();               // 先铺好棋盘数据
+applySkin(getSkin());       // 再套用上次用的场景并画出画面
+// 图片可能比脚本晚加载完，加载好后重画一次，保证食物一定显示出来
+Object.keys(sprites).forEach(key => {
+    const img = sprites[key];
+    if (img && !img.complete) {
+        img.addEventListener("load", () => {
+            drawScene();
+            if (isIdle) drawOverlay("准备开始", "点击「开始游戏」");
+            else if (isPause) drawOverlay("已暂停", "点击「暂停 / 继续」继续");
+            else if (gameOver) drawOverlay("游戏结束", overText);
+        });
+    }
+});
+</script>
+</body>
+</html>
