@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>奶娃贪吃蛇</title>
+<title>奶蛙贪吃蛇</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23fffbea'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ffd166'/%3E%3Ccircle cx='12.5' cy='15' r='1.9' fill='%233a2a1e'/%3E%3Ccircle cx='19.5' cy='15' r='1.9' fill='%233a2a1e'/%3E%3Cpath d='M13 20.5c1.6 1.5 4.4 1.5 6 0' stroke='%233a2a1e' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
 <style>
 /* ============================================================
-   奶娃贪吃蛇
+   奶蛙贪吃蛇
    设计基调：暖糖果色为底，街机级的信息密度与手感
    面板为实色/低透明实色，不用毛玻璃、不用发光描边
    ============================================================ */
@@ -201,6 +201,22 @@ body{
   display:flex; align-items:center; justify-content:center; color:var(--accent-ink); }
 .feat span.ic svg{ width:14px; height:14px; }
 .feat div{ font-size:13px; line-height:1.5; color:var(--ink-soft); }
+/* 七种掉落的悬浮解释 */
+.dropRow{ display:inline-flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.dropChip{
+  padding:2px 7px; border-radius:7px; font-size:11.5px; font-weight:700; line-height:1.5;
+  border:1px solid var(--panel-line); background:var(--chip); cursor:default;
+  transition:border-color .18s ease,box-shadow .18s ease,margin .18s ease;
+}
+.dropChip:hover,.dropChip.on{ border-color:currentColor; }
+.dropChip:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.dropTip{ display:block; margin-top:5px; font-size:11.5px; line-height:1.6; color:var(--ink-soft); min-height:2em; }
+.dropTip b{ color:var(--ink); }
+/* 设置里的道具图鉴 */
+.dropList{ display:grid; gap:7px; margin-top:8px; }
+.dropList .dItem{ display:flex; gap:8px; align-items:flex-start; font-size:11.5px; line-height:1.55; color:var(--ink-soft); }
+.dropList .dot{ flex:none; width:8px; height:8px; border-radius:50%; margin-top:4px; }
+.dropList .dItem b{ flex:none; width:52px; font-size:12px; color:var(--ink); }
 .feat div b{ color:var(--ink); font-weight:700; }
 
 .mascot{ width:66px; height:66px; object-fit:contain; animation:bob 3.4s ease-in-out infinite; }
@@ -361,7 +377,7 @@ body.touchMode .dpad{ display:grid; }
   <aside class="hud">
     <header class="brand">
       <img class="brandIcon" src="img/head.png" alt="" />
-      <h1>奶娃贪吃蛇</h1>
+      <h1>奶蛙贪吃蛇</h1>
     </header>
 
     <section class="panel scorePanel">
@@ -422,10 +438,10 @@ body.touchMode .dpad{ display:grid; }
       <!-- 开始 -->
       <div class="overlay show" id="ovStart">
         <img class="mascot" src="img/head.png" alt="" />
-        <h2>奶娃贪吃蛇</h2>
+        <h2>奶蛙贪吃蛇</h2>
         <div class="feats">
           <div class="feat"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span><div><b>连击与冲刺</b>：接连进食叠加倍率，Shift 冲刺消耗能量抢跑道</div></div>
-          <div class="feat"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></span><div><b>七种掉落</b>：黄金果、冰晶、疾风、护盾、磁铁、幽灵、冲击波</div></div>
+          <div class="feat"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg></span><div><b>七种掉落</b>：<span class="dropRow" id="dropLegend"></span><span class="dropTip" id="dropTip">点一下名字看它的作用（电脑可直接悬停）</span></div></div>
           <div class="feat"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20 20 4"/><path d="M14 4h6v6"/></svg></span><div><b>两种对手</b>：猎手会主动来找你，捕食者只抢食物、绝不挡路</div></div>
         </div>
         <div class="themes" id="themeRow"></div>
@@ -516,6 +532,9 @@ body.touchMode .dpad{ display:grid; }
       <div><div class="st">成绩记录</div><div class="sd">清空本地最高分、排行榜与成就</div></div>
       <div class="seg"><button id="btnWipe">清空</button></div>
     </div>
+
+    <h4>道具作用</h4>
+    <div class="dropList" id="uiDropList"></div>
 
     <h4>成就</h4>
     <div class="achList" id="uiAch"></div>
@@ -1137,9 +1156,12 @@ function ring(x, y, color, to, w) {
 function floatText(x, y, text, color, size) {
   G.texts.push({ x, y, text, color: color || theme.bodyHi, life: 1, size: size || 15, vy: -26 });
 }
+const BANNER_LIFE = 1900;
 function banner(text, sub, color) {
-  G.banners.push({ text, sub: sub || '', color: color || theme.body, life: 1, t: 0 });
-  if (G.banners.length > 3) G.banners.shift();
+  /* 一次只弹一张：同名的不重复排队，后面来的叠在队尾等前面让位 */
+  if (G.banners.some(b => b.text === text)) return;
+  G.banners.push({ text, sub: sub || '', color: color || theme.body, t: 0 });
+  if (G.banners.length > 3) G.banners.splice(1, 1);
 }
 function shakeIt(v) { G.shake = Math.min(26, G.shake + v); }
 function flashIt(v) { G.flash = Math.min(.85, G.flash + v); }
@@ -1148,13 +1170,13 @@ function flashIt(v) { G.flash = Math.min(.85, G.flash + v); }
    10. 道具定义
    ============================================================ */
 const DROPS = {
-  golden: { name: '黄金果', color: '#ffc247', life: 9000, weight: 30, glyph: 'star' },
-  frost: { name: '冰晶', color: '#4cc9f0', life: 12000, weight: 11, glyph: 'snow', buff: 'frost', ms: 5200 },
-  wind: { name: '疾风', color: '#3ddc97', life: 12000, weight: 11, glyph: 'wind', buff: 'wind', ms: 8000 },
-  shield: { name: '护盾', color: '#9d7bff', life: 12000, weight: 12, glyph: 'shield', buff: 'shield', ms: 1e9 },
-  magnet: { name: '磁铁', color: '#ff5d8f', life: 12000, weight: 10, glyph: 'magnet', buff: 'magnet', ms: 8000 },
-  ghost: { name: '幽灵', color: '#b8c0cc', life: 11000, weight: 9, glyph: 'ghost', buff: 'ghost', ms: 6000 },
-  shock: { name: '冲击波', color: '#ff8a3d', life: 10000, weight: 12, glyph: 'burst' }
+  golden: { name: '黄金果', color: '#ffc247', life: 9000, weight: 30, glyph: 'star', desc: '吃到 +50 分、蛇身长 2 节，并回一截冲刺能量' },
+  frost: { name: '冰晶', color: '#4cc9f0', life: 12000, weight: 11, glyph: 'snow', buff: 'frost', ms: 5200, desc: '时间流速降低 5 秒，走位更从容' },
+  wind: { name: '疾风', color: '#3ddc97', life: 12000, weight: 11, glyph: 'wind', buff: 'wind', ms: 8000, desc: '8 秒内全场加速，抢食更快、加成更猛' },
+  shield: { name: '护盾', color: '#9d7bff', life: 12000, weight: 12, glyph: 'shield', buff: 'shield', ms: 1e9, desc: '抵挡一次致命撞击，撞上边界也能救回来' },
+  magnet: { name: '磁铁', color: '#ff5d8f', life: 12000, weight: 10, glyph: 'magnet', buff: 'magnet', ms: 8000, desc: '8 秒内附近食物会自动向你靠拢' },
+  ghost: { name: '幽灵', color: '#b8c0cc', life: 11000, weight: 9, glyph: 'ghost', buff: 'ghost', ms: 6000, desc: '6 秒内可以穿过障碍与自己的身体' },
+  shock: { name: '冲击波', color: '#ff8a3d', life: 10000, weight: 12, glyph: 'burst', desc: '立刻清空场上所有障碍，每清一块 +8 分' }
 };
 const DROP_KEYS = Object.keys(DROPS);
 const DROP_TOTAL = DROP_KEYS.reduce((a, k) => a + DROPS[k].weight, 0);
@@ -1845,9 +1867,11 @@ function updFx(dt) {
     x.life -= 0.016 * k;
     if (x.life <= 0) G.texts.splice(i, 1);
   }
-  for (let i = G.banners.length - 1; i >= 0; i--) {
-    G.banners[i].t += dt;
-    if (G.banners[i].t > 2100) G.banners.splice(i, 1);
+  /* 只给最上面那张计时，排队的原地等（叠着排队，不一起挤出来） */
+  const topBanner = G.banners[0];
+  if (topBanner) {
+    topBanner.t += dt;
+    if (topBanner.t > BANNER_LIFE) G.banners.shift();
   }
 }
 
@@ -2304,44 +2328,57 @@ function drawFx() {
   ctx.restore();
 }
 
-/* --- 顶部横幅 --- */
+/* --- 顶部横幅：一次只显示一张，排队的在后面露一条边 --- */
 function drawBanners(t) {
-  let y = 62;
+  const n = G.banners.length;
+  if (!n) return;
+  const b = G.banners[0];
+  const inA = clamp(b.t / 150, 0, 1);
+  const outA = clamp((BANNER_LIFE - b.t) / 320, 0, 1);
+  const a = Math.min(inA, outA);
+  if (a <= 0) return;
+
   ctx.save();
   ctx.textAlign = 'center';
-  for (const b of G.banners) {
-    const inA = clamp(b.t / 150, 0, 1);
-    const outA = clamp((2100 - b.t) / 340, 0, 1);
-    const a = Math.min(inA, outA);
-    if (a <= 0) continue;
-    const sc = 0.90 + 0.10 * easeOut(inA);
+  ctx.font = '800 17px ' + FONT;
+  const tw = ctx.measureText(b.text).width;
+  ctx.font = '600 11.5px ' + FONT;
+  const sw = b.sub ? ctx.measureText(b.sub).width : 0;
+  const w = Math.max(tw, sw) + 38;
+  const h = b.sub ? 46 : 32;
+
+  ctx.translate(W / 2, 44);
+
+  /* 后面排队的那几张：在下面露一条本色边，读成"还压着几张" */
+  for (let i = Math.min(2, n - 1); i >= 1; i--) {
     ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate(W / 2, y);
-    ctx.scale(sc, sc);
-    ctx.font = '800 20px ' + FONT;
-    const tw = ctx.measureText(b.text).width;
-    ctx.font = '600 12px ' + FONT;
-    const sw = b.sub ? ctx.measureText(b.sub).width : 0;
-    const w = Math.max(tw, sw) + 46;
-    const h = b.sub ? 54 : 36;
-    ctx.fillStyle = panelBg();
-    ctx.strokeStyle = b.color;
-    ctx.lineWidth = 2;
-    rr(-w / 2, -h / 2, w, h, 13);
+    ctx.globalAlpha = a * (i === 1 ? .85 : .5);
+    ctx.fillStyle = G.banners[i].color;
+    ctx.strokeStyle = panelBg();
+    ctx.lineWidth = 1.5;
+    rr(-w / 2 + i * 6, -h / 2 + i * 6, w - i * 12, h, 11);
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = b.color;
-    ctx.font = '800 20px ' + FONT;
-    ctx.fillText(b.text, 0, b.sub ? -10 : 1);
-    if (b.sub) {
-      ctx.fillStyle = inkMuted();
-      ctx.font = '600 12px ' + FONT;
-      ctx.fillText(b.sub, 0, 13);
-    }
     ctx.restore();
-    y += h + 9;
-    if (y > 210) break;
   }
+
+  const sc = 0.92 + 0.08 * easeOut(inA);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.scale(sc, sc);
+  ctx.fillStyle = panelBg();
+  ctx.strokeStyle = b.color;
+  ctx.lineWidth = 2;
+  rr(-w / 2, -h / 2, w, h, 11);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = b.color;
+  ctx.font = '800 17px ' + FONT;
+  ctx.fillText(b.text, 0, b.sub ? -8 : 1);
+  if (b.sub) {
+    ctx.fillStyle = inkMuted();
+    ctx.font = '600 11.5px ' + FONT;
+    ctx.fillText(b.sub, 0, 13);
+  }
+  ctx.restore();
   ctx.restore();
 }
 
@@ -2625,6 +2662,35 @@ function buildAchList() {
   }
 }
 
+/* 七种掉落：开场页悬浮/点按看作用，设置里列全（移动端也能查） */
+function buildDropUI() {
+  const row = $('dropLegend'), tip = $('dropTip'), list = $('uiDropList');
+  if (row) {
+    row.innerHTML = DROP_KEYS.map(k => {
+      const d = DROPS[k];
+      return '<span class="dropChip" data-drop="' + k + '" tabindex="0" style="color:' + d.color + '">' + d.name + '</span>';
+    }).join('');
+    const show = k => {
+      const d = DROPS[k];
+      tip.innerHTML = '<b style="color:' + d.color + '">' + d.name + '</b> · ' + d.desc;
+    };
+    row.querySelectorAll('.dropChip').forEach(chip => {
+      const k = chip.dataset.drop;
+      chip.addEventListener('mouseenter', () => { show(k); chip.classList.add('on'); });
+      chip.addEventListener('mouseleave', () => chip.classList.remove('on'));
+      chip.addEventListener('focus', () => { show(k); chip.classList.add('on'); });
+      chip.addEventListener('blur', () => chip.classList.remove('on'));
+      chip.addEventListener('pointerdown', () => show(k));
+    });
+  }
+  if (list) {
+    list.innerHTML = DROP_KEYS.map(k => {
+      const d = DROPS[k];
+      return '<div class="dItem"><span class="dot" style="background:' + d.color + '"></span><b>' + d.name + '</b><span>' + d.desc + '</span></div>';
+    }).join('');
+  }
+}
+
 /* ============================================================
    21. 事件绑定
    ============================================================ */
@@ -2762,6 +2828,7 @@ function boot() {
   applyDpad();
   refreshBest();
   buildAchList();
+  buildDropUI();
   bindUI();
   idlePreview();
   syncHUD();
