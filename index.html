@@ -765,9 +765,12 @@
                 if (span < 60000) return '刚刚';
                 if (span < 3600000) return Math.floor(span / 60000) + ' 分钟前';
                 if (span < 86400000) return Math.floor(span / 3600000) + ' 小时前';
+                // 超过一天就显示具体日期；跨年的补上年份，避免看成今年
                 const d = new Date(ts);
+                const now = new Date();
                 const p = n => String(n).padStart(2, '0');
-                return (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                const prefix = d.getFullYear() === now.getFullYear() ? '' : d.getFullYear() + '年';
+                return prefix + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + p(d.getHours()) + ':' + p(d.getMinutes());
             }
 
             // 全部用 textContent 写入，避免把留言当 HTML 渲染
