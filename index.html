@@ -905,7 +905,9 @@
                 document.getElementById('msg').appendChild(box);
             }
 
-            if (GISCUS.repo && GISCUS.repoId && GISCUS.categoryId) {
+            // giscus 只对外网的 http(s) 页面生效（线上站点）；本地双击打开是 file://，直接用下面这套本机留言板
+            const online = location.protocol === 'http:' || location.protocol === 'https:';
+            if (online && GISCUS.repo && GISCUS.repoId && GISCUS.categoryId) {
                 formEl.hidden = true;
                 if (hintEl) hintEl.hidden = true;
                 emptyEl.hidden = true;
