@@ -731,12 +731,13 @@
         // ===== 留言板 =====
         // 现在：提交后立刻显示、刷新不丢、另开标签页会自动同步（storage 事件）。
         // 在线留言（giscus）：三项都填好后，本机留言板会自动隐藏，换成所有访客共享的评论区。
-        //   repo / repoId 已按线上仓库填好；categoryId 装完 giscus app 后从 https://giscus.app 复制过来即可。
-        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区）。
+        //   repo / repoId / categoryId 已按线上仓库填好（分类 General）。
+        //   还差最后一步：把 giscus 应用装到这个仓库上（https://github.com/apps/giscus → Install → 选 Only select repositories）。
+        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区，会自动用本机留言板）。
         const GISCUS = {
             repo: 'huakingsama/huakingsama.github.io',
             repoId: 'R_kgDOVKghuw',
-            categoryId: '',
+            categoryId: 'DIC_kwDOVKghu84DIqkI',
             category: 'General'
         };
 
