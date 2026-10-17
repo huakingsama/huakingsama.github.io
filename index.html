@@ -392,6 +392,13 @@
         .msg-hint:empty {
             display: none;
         }
+        /* 在线评论区（Twikoo）容器 */
+        .twikoo-box {
+            margin-top: 1.4rem;
+        }
+        .twikoo-box .msg-hint {
+            margin-top: .2rem;
+        }
         .msg-list {
             list-style: none;
             margin-top: 1.5rem;
@@ -729,16 +736,12 @@
         }
 
         // ===== 留言板 =====
-        // 现在：提交后立刻显示、刷新不丢、另开标签页会自动同步（storage 事件）。
-        // 在线留言（giscus）：三项都填好后，本机留言板会自动隐藏，换成所有访客共享的评论区。
-        //   repo / repoId / categoryId 已按线上仓库填好（分类 General）。
-        //   还差最后一步：把 giscus 应用装到这个仓库上（https://github.com/apps/giscus → Install → 选 Only select repositories）。
-        //   页面必须是挂在网上的 http(s) 地址（本地双击打开的 file:// 用不了在线评论区，会自动用本机留言板）。
-        const GISCUS = {
-            repo: 'huakingsama/huakingsama.github.io',
-            repoId: 'R_kgDOVKghuw',
-            categoryId: 'DIC_kwDOVKghu84DIqkI',
-            category: 'General'
+        // 在线留言（Twikoo）：访客不用登录 GitHub，填个昵称就能发，所有人看到的是同一份评论区。
+        //   envId 指向 EdgeOne 上那条 Twikoo 云函数（部署在腾讯 EdgeOne Makers，留言存在平台自带的 KV 里，不需要自备数据库）。
+        //   前端脚本走同目录的 js/twikoo.min.js、js/twikoo.css —— 自托管，不依赖任何 CDN。
+        //   页面必须挂在线上的 http(s) 地址；本地双击打开的 file:// 用不了云端评论区，会自动改用下面的本机留言板。
+        const TWIKOO = {
+            envId: 'https://twikoo.naowa.dynv6.net'
         };
 
         (function () {
@@ -883,37 +886,64 @@
                 if (read().length) render();
             }, 30000);
 
-            function mountGiscus() {
+            // 动态加载 Twikoo 前端（自托管文件），加载不出来时给一句人话提示，不留空白
+            function mountTwikoo() {
+                const host = document.getElementById('msg');
                 const box = document.createElement('div');
-                box.className = 'giscus';
+                box.id = 'tcomment';
+                box.className = 'twikoo-box';
+                const loading = document.createElement('p');
+                loading.className = 'msg-hint';
+                loading.textContent = '评论区加载中…';
+                box.appendChild(loading);
+                host.appendChild(box);
+
+                let css = document.querySelector('link[data-twikoo]');
+                if (!css) {
+                    css = document.createElement('link');
+                    css.rel = 'stylesheet';
+                    css.href = 'js/twikoo.css';
+                    css.setAttribute('data-twikoo', '1');
+                    document.head.appendChild(css);
+                }
+
+                function ready() {
+                    if (!window.twikoo) return fail();
+                    loading.remove();
+                    window.twikoo.init({
+                        envId: TWIKOO.envId,
+                        el: '#tcomment',
+                        lang: 'zh-CN',
+                        path: location.pathname
+                    });
+                }
+
+                function fail() {
+                    loading.textContent = '评论区暂时加载不出来，刷新一下试试；实在不行在下面留言告诉我。';
+                }
+
+                const existed = document.querySelector('script[data-twikoo]');
+                if (existed) {
+                    ready();
+                    return;
+                }
                 const s = document.createElement('script');
-                s.src = 'https://giscus.app/client.js';
+                s.src = 'js/twikoo.min.js';
                 s.async = true;
-                s.setAttribute('crossorigin', 'anonymous');
-                s.setAttribute('data-repo', GISCUS.repo);
-                s.setAttribute('data-repo-id', GISCUS.repoId);
-                s.setAttribute('data-category', GISCUS.category);
-                s.setAttribute('data-category-id', GISCUS.categoryId);
-                s.setAttribute('data-mapping', 'pathname');
-                s.setAttribute('data-strict', '0');
-                s.setAttribute('data-reactions-enabled', '1');
-                s.setAttribute('data-emit-metadata', '0');
-                s.setAttribute('data-input-position', 'top');
-                s.setAttribute('data-theme', 'light');
-                s.setAttribute('data-lang', 'zh-CN');
-                s.setAttribute('data-loading', 'eager');
-                box.appendChild(s);
-                document.getElementById('msg').appendChild(box);
+                s.setAttribute('data-twikoo', '1');
+                s.addEventListener('load', ready);
+                s.addEventListener('error', fail);
+                document.body.appendChild(s);
             }
 
-            // giscus 只对外网的 http(s) 页面生效（线上站点）；本地双击打开是 file://，直接用下面这套本机留言板
+            // Twikoo 只对挂在网上的 http(s) 页面生效（线上站点）；本地双击打开是 file://，直接用下面这套本机留言板
             const online = location.protocol === 'http:' || location.protocol === 'https:';
-            if (online && GISCUS.repo && GISCUS.repoId && GISCUS.categoryId) {
+            if (online && TWIKOO.envId) {
                 formEl.hidden = true;
                 if (hintEl) hintEl.hidden = true;
                 emptyEl.hidden = true;
                 listEl.hidden = true;
-                mountGiscus();
+                mountTwikoo();
             } else {
                 render();
             }
