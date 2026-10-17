@@ -736,13 +736,20 @@
         }
 
         // ===== 留言板 =====
-        // 在线留言（Twikoo）：访客不用登录 GitHub，填个昵称就能发，所有人看到的是同一份评论区。
-        //   envId 指向 EdgeOne 上那条 Twikoo 云函数（部署在腾讯 EdgeOne Makers，留言存在平台自带的 KV 里，不需要自备数据库）。
-        //   前端脚本走同目录的 js/twikoo.min.js、js/twikoo.css —— 自托管，不依赖任何 CDN。
-        //   页面必须挂在线上的 http(s) 地址；本地双击打开的 file:// 用不了云端评论区，会自动改用下面的本机留言板。
-        const TWIKOO = {
-            envId: 'https://twikoo.naowa.dynv6.net'
+        // 在线留言：评论存在 GitHub 仓库的那个 Issue 里（#2），访客不用注册、不用登录，填个昵称就能发，
+        // 所有人看到的是同一份评论区。博主删留言：打开该 Issue，鼠标移到评论右上角 ··· → Delete comment。
+        //   token 只用来读写评论。建议在 GitHub 建 Fine-grained token：只选本仓库、只给 Issues: Read and write，
+        //   其它权限一律 No access —— 即使令牌被看到，也改不了仓库里的任何代码。
+        //   页面挂在线上的 http(s) 地址时用这套；本地双击打开的 file:// 用不了，会自动改用下面的本机留言板。
+        const GHBOARD = {
+            repo: 'huakingsama/huakingsama.github.io',
+            issue: 2,
+            token: '',
+            api: 'https://api.github.com'
         };
+        // 线上（http/https）用 GitHub 版留言区；本地 file:// 预览仍用下面的本机留言板
+        const ONLINE_BOARD = (location.protocol === 'http:' || location.protocol === 'https:') &&
+            !!(GHBOARD.repo && GHBOARD.issue);
 
         (function () {
             const KEY = 'blog.messages.v1';
@@ -883,67 +890,246 @@
 
             // 让“刚刚 / n 分钟前”保持准确
             setInterval(function () {
-                if (read().length) render();
+                if (!ONLINE_BOARD && read().length) render();
             }, 30000);
 
-            // 动态加载 Twikoo 前端（自托管文件），加载不出来时给一句人话提示，不留空白
-            function mountTwikoo() {
-                const host = document.getElementById('msg');
-                const box = document.createElement('div');
-                box.id = 'tcomment';
-                box.className = 'twikoo-box';
-                const loading = document.createElement('p');
-                loading.className = 'msg-hint';
-                loading.textContent = '评论区加载中…';
-                box.appendChild(loading);
-                host.appendChild(box);
+            // ===== 在线留言：读 / 写 GitHub Issue 的评论 =====
+            const MINE_KEY = 'gh.comments.mine.v1';
 
-                let css = document.querySelector('link[data-twikoo]');
-                if (!css) {
-                    css = document.createElement('link');
-                    css.rel = 'stylesheet';
-                    css.href = 'js/twikoo.css';
-                    css.setAttribute('data-twikoo', '1');
-                    document.head.appendChild(css);
+            function mineSet() {
+                try {
+                    return new Set(JSON.parse(localStorage.getItem(MINE_KEY) || '[]').map(String));
+                } catch (e) {
+                    return new Set();
                 }
-
-                function ready() {
-                    if (!window.twikoo) return fail();
-                    loading.remove();
-                    window.twikoo.init({
-                        envId: TWIKOO.envId,
-                        el: '#tcomment',
-                        lang: 'zh-CN',
-                        path: location.pathname
-                    });
-                }
-
-                function fail() {
-                    loading.textContent = '评论区暂时加载不出来，刷新一下试试；实在不行在下面留言告诉我。';
-                }
-
-                const existed = document.querySelector('script[data-twikoo]');
-                if (existed) {
-                    ready();
-                    return;
-                }
-                const s = document.createElement('script');
-                s.src = 'js/twikoo.min.js';
-                s.async = true;
-                s.setAttribute('data-twikoo', '1');
-                s.addEventListener('load', ready);
-                s.addEventListener('error', fail);
-                document.body.appendChild(s);
             }
 
-            // Twikoo 只对挂在网上的 http(s) 页面生效（线上站点）；本地双击打开是 file://，直接用下面这套本机留言板
-            const online = location.protocol === 'http:' || location.protocol === 'https:';
-            if (online && TWIKOO.envId) {
-                formEl.hidden = true;
+            function mineAdd(id) {
+                const s = mineSet();
+                s.add(String(id));
+                try {
+                    localStorage.setItem(MINE_KEY, JSON.stringify(Array.from(s).slice(-200)));
+                } catch (e) {}
+            }
+
+            function mineDrop(id) {
+                const s = mineSet();
+                s.delete(String(id));
+                try {
+                    localStorage.setItem(MINE_KEY, JSON.stringify(Array.from(s)));
+                } catch (e) {}
+            }
+
+            // 留言正文约定：第一行是昵称，空行之后是正文；没有这个格式就按“匿名访客 + 全文”处理
+            function parseComment(c) {
+                const raw = String(c.body || '').replace(/\r/g, '');
+                const lines = raw.split('\n');
+                let name = '匿名访客';
+                let rest = raw.trim();
+                const m = (lines[0] || '').trim().match(/^\*\*(.+?)\*\*$/);
+                if (m) {
+                    name = m[1].trim().slice(0, 20) || '匿名访客';
+                    rest = lines.slice(1).join('\n').replace(/^\s*\n/, '').trim();
+                }
+                return {
+                    id: String(c.id),
+                    name: name,
+                    text: rest,
+                    at: Date.parse(c.created_at) || Date.now()
+                };
+            }
+
+            function ghHeaders(withBody) {
+                const h = {
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                };
+                if (GHBOARD.token) h['Authorization'] = 'Bearer ' + GHBOARD.token;
+                if (withBody) h['Content-Type'] = 'application/json';
+                return h;
+            }
+
+            function ghCommentsUrl() {
+                return GHBOARD.api + '/repos/' + GHBOARD.repo + '/issues/' + GHBOARD.issue + '/comments';
+            }
+
+            function ghLoadAll() {
+                const all = [];
+                const one = function (page) {
+                    return fetch(ghCommentsUrl() + '?per_page=100&page=' + page, {
+                        headers: ghHeaders()
+                    }).then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    }).then(function (arr) {
+                        arr.forEach(function (c) {
+                            all.push(parseComment(c));
+                        });
+                        if (arr.length === 100 && page < 5) return one(page + 1);
+                        return all;
+                    });
+                };
+                return one(1);
+            }
+
+            function ghPost(name, text) {
+                const safe = name.replace(/[*\n\r]/g, '').trim().slice(0, 20) || '匿名访客';
+                return fetch(ghCommentsUrl(), {
+                    method: 'POST',
+                    headers: ghHeaders(true),
+                    body: JSON.stringify({ body: '**' + safe + '**\n\n' + text })
+                }).then(function (r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                });
+            }
+
+            function ghDelete(id) {
+                return fetch(GHBOARD.api + '/repos/' + GHBOARD.repo + '/issues/comments/' + id, {
+                    method: 'DELETE',
+                    headers: ghHeaders()
+                }).then(function (r) {
+                    if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status);
+                    return true;
+                });
+            }
+
+            // 渲染（复用本机留言板那套 .msg-* 样式；全部走 textContent，不把留言当 HTML）
+            function renderRemote(arr, freshId) {
+                listEl.textContent = '';
+                emptyEl.hidden = arr.length > 0;
+                if (!arr.length) emptyEl.textContent = '还没有留言，来写第一条吧。';
+                const mine = mineSet();
+                arr.slice().sort(function (a, b) {
+                    return a.at - b.at;
+                }).forEach(function (m) {
+                    const li = document.createElement('li');
+                    li.className = 'msg-item' + (m.id === freshId ? ' msg-new' : '');
+
+                    const head = document.createElement('div');
+                    head.className = 'msg-head';
+                    const nm = document.createElement('span');
+                    nm.className = 'msg-name';
+                    nm.textContent = m.name;
+                    const tm = document.createElement('span');
+                    tm.className = 'msg-time';
+                    tm.textContent = ago(m.at);
+                    tm.title = new Date(m.at).toLocaleString('zh-CN');
+                    head.appendChild(nm);
+                    head.appendChild(tm);
+
+                    // 只给「这台浏览器」发过的留言配删除按钮；别人的留言请去 GitHub 的 Issue 里删
+                    if (mine.has(m.id)) {
+                        const del = document.createElement('button');
+                        del.type = 'button';
+                        del.className = 'msg-del';
+                        del.textContent = '删除';
+                        del.setAttribute('aria-label', '删除这条留言');
+                        del.addEventListener('click', function () {
+                            if (!del.classList.contains('is-armed')) {
+                                del.classList.add('is-armed');
+                                del.textContent = '确认删除';
+                                clearTimeout(del.armTimer);
+                                del.armTimer = setTimeout(function () {
+                                    del.classList.remove('is-armed');
+                                    del.textContent = '删除';
+                                }, 3000);
+                                return;
+                            }
+                            clearTimeout(del.armTimer);
+                            del.disabled = true;
+                            ghDelete(m.id).then(function () {
+                                mineDrop(m.id);
+                                tip('已删除');
+                                return refresh();
+                            }).catch(function () {
+                                del.disabled = false;
+                                tip('删除失败，稍后再试', true);
+                            });
+                        });
+                        head.appendChild(del);
+                    }
+
+                    const tx = document.createElement('p');
+                    tx.className = 'msg-text';
+                    tx.textContent = m.text;
+
+                    li.appendChild(head);
+                    li.appendChild(tx);
+                    listEl.appendChild(li);
+                });
+            }
+
+            // refresh 放在这一层，renderRemote 里的“删除”按钮才能调到它
+            let refresh = function () {
+                return Promise.resolve();
+            };
+
+            function mountOnline() {
+                listEl.hidden = false;
+
+                refresh = function (freshId) {
+                    return ghLoadAll().then(function (arr) {
+                        renderRemote(arr, freshId);
+                        return arr;
+                    }).catch(function () {
+                        emptyEl.hidden = false;
+                        emptyEl.textContent = '留言暂时拉不出来，刷新一下试试。';
+                    });
+                };
+
+                // 还没填 token 时：只读能把已有留言显示出来，发布功能先隐藏
+                if (!GHBOARD.token) {
+                    formEl.hidden = true;
+                    if (hintEl) {
+                        hintEl.hidden = false;
+                        hintEl.textContent = '留言功能正在配置中，稍后刷新即可发布。';
+                    }
+                    refresh();
+                    return;
+                }
+
+                formEl.hidden = false;
                 if (hintEl) hintEl.hidden = true;
-                emptyEl.hidden = true;
-                listEl.hidden = true;
-                mountTwikoo();
+                emptyEl.hidden = false;
+                emptyEl.textContent = '留言加载中…';
+                refresh();
+
+                formEl.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const name = nameEl.value.trim().slice(0, 20) || '匿名访客';
+                    const text = textEl.value.trim().slice(0, 500);
+                    if (!text) {
+                        tip('先写点什么再提交吧', true);
+                        textEl.focus();
+                        return;
+                    }
+                    const btn = document.getElementById('msgSubmit');
+                    if (btn) btn.disabled = true;
+                    tip('正在发布…');
+                    ghPost(name, text).then(function (c) {
+                        mineAdd(c.id);
+                        textEl.value = '';
+                        tip('已发布');
+                        return refresh(String(c.id));
+                    }).catch(function () {
+                        tip('发布失败，检查网络后再试一次', true);
+                    }).then(function () {
+                        if (btn) btn.disabled = false;
+                    });
+                });
+
+                // 每 45 秒拉一次（页面可见时），别人新发的留言会自动出现
+                setInterval(function () {
+                    if (document.visibilityState === 'visible') refresh();
+                }, 45000);
+                document.addEventListener('visibilitychange', function () {
+                    if (document.visibilityState === 'visible') refresh();
+                });
+            }
+
+            if (ONLINE_BOARD) {
+                mountOnline();
             } else {
                 render();
             }
